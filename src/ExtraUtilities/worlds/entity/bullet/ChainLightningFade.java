@@ -116,7 +116,7 @@ public class ChainLightningFade extends BulletType {
                 // If this effect is crucial for the visual feedback of collision,
                 // you might need to manually call hitEffect.at() here,
                 // e.g., hitEffect.at(ox + (nx - ox) / 2f, oy + (ny - oy) / 2f);
-                Damage.collideLine(b, b.team, ox, oy, angle, length, large, false, -1);
+                Damage.collideLine(b, b.team, Fx.none, ox, oy, x, y, solid, air);// Fuck it
                 // --- END OF MODIFICATION ---
             }
             ox = nx;
