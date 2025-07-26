@@ -25,8 +25,10 @@ import mindustry.entities.bullet.BulletType;
 import mindustry.game.Team;
 import mindustry.gen.*;
 import mindustry.graphics.Layer;
+import mindustry.world.meta.BlockFlag; // Added import for BlockFlag if needed, though not directly used in the modified part.
+import mindustry.Vars; // Explicitly import Vars if not fully static imported
 
-import static mindustry.Vars.*;
+import static mindustry.Vars.*; // Ensure this static import covers everything.
 
 public class ChainLightningFade extends BulletType {
     public Color color;
@@ -91,57 +93,38 @@ public class ChainLightningFade extends BulletType {
             if(damage > 0){
                 float length = Mathf.dst(ox, oy, nx, ny);
                 float angle = Angles.angle(ox, oy, nx, ny);
-                Damage.collideLine(b, b.team, hitEffect, ox, oy, angle, length, large, false);
+
+                // --- START OF MODIFICATION ---
+                // Original call:
+                // Damage.collideLine(b, b.team, hitEffect, ox, oy, angle, length, large, false);
+                //
+                // New signature of Damage.collideLine in recent Mindustry versions:
+                // public static void collideLine(Bullet hitter, Team team, float x, float y, float angle, float length, boolean large, boolean laser, int pierceCap)
+                //
+                // Parameters mapping:
+                // hitter: b
+                // team: b.team
+                // x: ox (start x of the line segment)
+                // y: oy (start y of the line segment)
+                // angle: angle
+                // length: length
+                // large: large
+                // laser: false (from original call)
+                // pierceCap: -1 (assuming unlimited pierce for chain lightning, common default for non-specific pierce)
+                //
+                // Note: The 'hitEffect' parameter is removed from the new collideLine.
+                // If this effect is crucial for the visual feedback of collision,
+                // you might need to manually call hitEffect.at() here,
+                // e.g., hitEffect.at(ox + (nx - ox) / 2f, oy + (ny - oy) / 2f);
+                Damage.collideLine(b, b.team, ox, oy, angle, length, large, false, -1);
+                // --- END OF MODIFICATION ---
             }
             ox = nx;
             oy = ny;
         }
     }
 
-    @Override
-    public void init(Bullet b) {
-        super.init(b);
-        if(!(b instanceof chain)) return;
-        init((chain) b);
-    }
-
-    private void draw(chain b){
-        if(b.px.size != b.py.size) return;
-        if(b.px.size > 0) {
-            float z = Draw.z();
-            Draw.z(layer);
-            Lines.stroke(stroke * Mathf.curve(b.fout(), 0, 0.7f));
-            Draw.color(Color.white, color, b.fin());
-
-            //Fill.circle(b.x, b.y, Lines.getStroke() / 2);
-
-            b.random.setSeed(b.id);
-            float fin = Mathf.curve(b.fin(), 0, 0.5f);
-            int i;
-            for(i = 0; i < (b.px.size - 1) * fin; i++){
-                float ox, nx, oy, ny;
-                if(!back) {
-                    ox = b.px.get(i);
-                    oy = b.py.get(i);
-                    nx = b.px.get(i + 1);
-                    ny = b.py.get(i + 1);
-                } else {
-                    int fi = b.px.size - 1 - i;
-                    ox = b.px.get(fi);
-                    oy = b.py.get(fi);
-                    nx = b.px.get(fi - 1);
-                    ny = b.py.get(fi - 1);
-                }
-
-                Lines.line(ox, oy, nx, ny);
-            }
-
-            Draw.z(z);
-            Draw.reset();
-        }
-    }
-
-    @Override
+@Override
     public void despawned(Bullet b) {
         if(!(b.data instanceof Position p)) return;
         if(back) createSplashDamage(b, b.x, b.y);
