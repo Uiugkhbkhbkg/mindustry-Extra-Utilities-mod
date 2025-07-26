@@ -25,17 +25,17 @@ import mindustry.entities.bullet.BulletType;
 import mindustry.game.Team;
 import mindustry.gen.*;
 import mindustry.graphics.Layer;
-import mindustry.world.meta.BlockFlag; // Added import for BlockFlag if needed, though not directly used in the modified part.
-import mindustry.Vars; // Explicitly import Vars if not fully static imported
+import mindustry.world.meta.BlockFlag;
+import mindustry.Vars;
 
-import static mindustry.Vars.*; // Ensure this static import covers everything.
+import static mindustry.Vars.*;
 
 public class ChainLightningFade extends BulletType {
     public Color color;
 
     public float linkSpace;
     public float stroke;
-    public boolean large = false;
+    public boolean large = false; // This is used for the 'solid' parameter in collideLine
     public boolean back = false;
     public float layer = Layer.bullet + 0.1f;
 
@@ -76,7 +76,7 @@ public class ChainLightningFade extends BulletType {
         b.px.add(b.x);
         b.py.add(b.y);
         for(i = 0; i < links; i++){
-            float nx, ny;
+            float nx, ny; // nx and ny are the end points of the current segment from (ox, oy)
             if(i == links - 1){
                 nx = tx;
                 ny = ty;
@@ -91,40 +91,27 @@ public class ChainLightningFade extends BulletType {
             b.py.add(ny);
 
             if(damage > 0){
-                float length = Mathf.dst(ox, oy, nx, ny);
-                float angle = Angles.angle(ox, oy, nx, ny);
-
-                // --- START OF MODIFICATION ---
-                // Original call:
-                // Damage.collideLine(b, b.team, hitEffect, ox, oy, angle, length, large, false);
+                // The actual Damage.collideLine signature in Mindustry 150.1 is:
+                // public static void collideLine(Bullet bullet, Team team, @Nullable Effect effect, float x, float y, float x2, float y2, boolean solid, boolean air)
                 //
-                // New signature of Damage.collideLine in recent Mindustry versions:
-                // public static void collideLine(Bullet hitter, Team team, float x, float y, float angle, float length, boolean large, boolean laser, int pierceCap)
-                //
-                // Parameters mapping:
-                // hitter: b
-                // team: b.team
-                // x: ox (start x of the line segment)
-                // y: oy (start y of the line segment)
-                // angle: angle
-                // length: length
-                // large: large
-                // laser: false (from original call)
-                // pierceCap: -1 (assuming unlimited pierce for chain lightning, common default for non-specific pierce)
-                //
-                // Note: The 'hitEffect' parameter is removed from the new collideLine.
-                // If this effect is crucial for the visual feedback of collision,
-                // you might need to manually call hitEffect.at() here,
-                // e.g., hitEffect.at(ox + (nx - ox) / 2f, oy + (ny - oy) / 2f);
-                Damage.collideLine(b, b.team, Fx.none, ox, oy, x, y, solid, air);// Fuck it
-                // --- END OF MODIFICATION ---
+                // Parameters mapping from your code:
+                // bullet: b           (The bullet causing the damage)
+                // team: b.team       (The team of the bullet)
+                // effect: Fx.none   (As decided, use no visual effect for collision)
+                // x: ox              (Start X coordinate of the line segment)
+                // y: oy              (Start Y coordinate of the line segment)
+                // x2: nx             (End X coordinate of the line segment)
+                // y2: ny             (End Y coordinate of the line segment)
+                // solid: large       (Use the 'large' class variable for solid collision check)
+                // air: false        (Original value from your code, assume no air collision needed)
+                Damage.collideLine(b, b.team, Fx.none, ox, oy, nx, ny, large, false);
             }
             ox = nx;
             oy = ny;
         }
     }
 
-@Override
+    @Override
     public void despawned(Bullet b) {
         if(!(b.data instanceof Position p)) return;
         if(back) createSplashDamage(b, b.x, b.y);
