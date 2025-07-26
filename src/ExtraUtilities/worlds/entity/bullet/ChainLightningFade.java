@@ -19,7 +19,7 @@ import arc.util.pooling.Pools;
 import mindustry.content.Fx;
 import mindustry.content.StatusEffects;
 import mindustry.entities.Damage;
-import mindustry.entities.Effect; // This might become unused if hitEffect is removed or processed differently
+import mindustry.entities.Effect;
 import mindustry.entities.Mover;
 import mindustry.entities.bullet.BulletType;
 import mindustry.game.Team;
@@ -35,7 +35,7 @@ public class ChainLightningFade extends BulletType {
 
     public float linkSpace;
     public float stroke;
-    public boolean large = false; // This is used for the 'solid' parameter in collideLine
+    public boolean large = false;
     public boolean back = false;
     public float layer = Layer.bullet + 0.1f;
 
@@ -48,7 +48,7 @@ public class ChainLightningFade extends BulletType {
         this.stroke = stroke;
         this.color = color;
         this.damage = damage;
-        this.hitEffect = hitEffect; // hitEffect is still here, if you need its functionality, you might need to manually call it.
+        this.hitEffect = hitEffect;
         status = StatusEffects.shocked;
     }
 
@@ -126,11 +126,36 @@ public class ChainLightningFade extends BulletType {
 //        if(b.data instanceof Position p) Pools.free(p);
 //    }
 
+    // This is the Mindustry framework's mandated draw method for BulletType
+    // It will be called by the game loop.
     @Override
     public void draw(Bullet b) {
-        if(!(b instanceof chain)) return;
-        draw((chain) b);
+        if(!(b instanceof chain)) return; // First, check if the bullet is of your custom 'chain' type
+        this.drawChain((chain) b); // <-- Call the *new*, explicitly named method
+                                  // This prevents recursion
     }
+
+    // --- NEW METHOD FOR ACTUAL CHAIN LIGHTNING DRAWING ---
+    // This method will perform the actual drawing logic for your 'chain' bullets.
+    public void drawChain(chain bullet){
+        if (bullet.px.size < 2) return; // Need at least two points to draw a line
+
+        Draw.color(color); // Apply the bullet's color
+        Lines.stroke(stroke); // Apply the bullet's stroke width
+
+        // Draw lines between all points in the chain
+        for(int i = 0; i < bullet.px.size - 1; i++){
+            Lines.line(bullet.px.get(i), bullet.py.get(i), bullet.px.get(i + 1), bullet.py.get(i + 1));
+        }
+
+        // Draw end caps or effects if desired
+        Fill.circle(bullet.px.get(0), bullet.py.get(0), stroke / 2f); // Example: circle at start
+        Fill.circle(bullet.px.peek(), bullet.py.peek(), stroke / 2f); // Example: circle at end
+
+        Draw.reset(); // IMPORTANT: Reset drawing state after custom drawing
+    }
+    // --- END OF NEW METHOD ---
+
 
     @Override
     public @Nullable Bullet create(
@@ -159,7 +184,7 @@ public class ChainLightningFade extends BulletType {
     public static class chain extends Bullet{
         public final Rand random = new Rand();
 
-        //public float[][] resetPos;
+        //public float[][] resetPos; // This line is commented out, good.
         public FloatSeq px = new FloatSeq();
         public FloatSeq py = new FloatSeq();
 
