@@ -22,12 +22,12 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Set up JDK 17
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v4 # 更新到 v4，并增加缓存
       with:
-        java-version: 17
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'gradle'
 
-    # what the f**k, the issue with the SDK version???
-    # this trap me for an hour...
     - name: Set up Android SDK
       run: echo "${ANDROID_HOME}/build-tools/34.0.0" >> $GITHUB_PATH
 
@@ -39,6 +39,9 @@ jobs:
     
     - name: Build with Gradle
       run: ./gradlew deploy
+
+    - name: List generated artifacts # <--- 新增这个步骤！
+      run: ls -l build/libs/
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
