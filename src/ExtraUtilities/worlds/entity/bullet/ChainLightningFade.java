@@ -19,7 +19,7 @@ import arc.util.pooling.Pools;
 import mindustry.content.Fx;
 import mindustry.content.StatusEffects;
 import mindustry.entities.Damage;
-import mindustry.entities.Effect;
+import mindustry.entities.Effect; // This might become unused if hitEffect is removed or processed differently
 import mindustry.entities.Mover;
 import mindustry.entities.bullet.BulletType;
 import mindustry.game.Team;
@@ -48,7 +48,7 @@ public class ChainLightningFade extends BulletType {
         this.stroke = stroke;
         this.color = color;
         this.damage = damage;
-        this.hitEffect = hitEffect;
+        this.hitEffect = hitEffect; // hitEffect is still here, if you need its functionality, you might need to manually call it.
         status = StatusEffects.shocked;
     }
 
@@ -76,7 +76,7 @@ public class ChainLightningFade extends BulletType {
         b.px.add(b.x);
         b.py.add(b.y);
         for(i = 0; i < links; i++){
-            float nx, ny; // nx and ny are the end points of the current segment from (ox, oy)
+            float nx, ny;
             if(i == links - 1){
                 nx = tx;
                 ny = ty;
@@ -91,20 +91,17 @@ public class ChainLightningFade extends BulletType {
             b.py.add(ny);
 
             if(damage > 0){
-                // The actual Damage.collideLine signature in Mindustry 150.1 is:
-                // public static void collideLine(Bullet bullet, Team team, @Nullable Effect effect, float x, float y, float x2, float y2, boolean solid, boolean air)
-                //
-                // Parameters mapping from your code:
-                // bullet: b           (The bullet causing the damage)
-                // team: b.team       (The team of the bullet)
-                // effect: Fx.none   (As decided, use no visual effect for collision)
-                // x: ox              (Start X coordinate of the line segment)
-                // y: oy              (Start Y coordinate of the line segment)
-                // x2: nx             (End X coordinate of the line segment)
-                // y2: ny             (End Y coordinate of the line segment)
-                // solid: large       (Use the 'large' class variable for solid collision check)
-                // air: false        (Original value from your code, assume no air collision needed)
-                Damage.collideLine(b, b.team, Fx.none, ox, oy, nx, ny, large, false);
+                float length = Mathf.dst(ox, oy, nx, ny);
+                float angle = Angles.angle(ox, oy, nx, ny);
+
+                // Re-aligned with Mindustry 150.1 Damage.collideLine signature:
+                // collideLine(Bullet hitter, Team team, float x, float y, float angle, float length, boolean large, boolean laser, int pierceCap)
+                Damage.collideLine(b, b.team, ox, oy, angle, length, large, false, -1);
+
+                // If hitEffect (from constructor) is supposed to be applied on collision,
+                // you might need to call it manually, as it's no longer a parameter in collideLine.
+                // Example:
+                // if(hitEffect != Fx.none) hitEffect.at(ox + (nx - ox) / 2f, oy + (ny - oy) / 2f);
             }
             ox = nx;
             oy = ny;
